@@ -1,0 +1,7 @@
+build/
+lib/
+Vocabulary/ORBvoc.txt
+Examples/Monocular/mono_kitti
+Examples/Monocular/mono_tum
+Examples/Stereo/stereo_kitti
+Examples/RGB-D/rgbd_tum
