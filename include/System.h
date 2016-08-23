@@ -110,7 +110,7 @@ public:
     // SaveMap(const string &filename);
     // LoadMap(const string &filename);
 
-private:
+public:
 
     // Input sensor
     eSensor mSensor;
