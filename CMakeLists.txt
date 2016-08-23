@@ -95,3 +95,47 @@ add_executable(mono_kitti
 Examples/Monocular/mono_kitti.cc)
 target_link_libraries(mono_kitti ${PROJECT_NAME})
 
+if(NOT WIN32)
+    option(ORB_SLAM2_BUILD_PKGCONFIG "Build pkg-config .pc file for ORB_SLAM2" ON)
+endif(NOT WIN32)
+
+macro(libraries_for_pkgconfig VARNAME)
+    foreach(__lib ${ARGN})
+        string(STRIP __lib ${__lib})
+        string(SUBSTRING ${__lib} 0 1 __lib_is_absolute)
+        if (__lib_is_absolute STREQUAL "/")
+            get_filename_component(__lib_path ${__lib} PATH)
+            get_filename_component(__lib_name ${__lib} NAME_WE)
+            string(REGEX REPLACE "^lib" "" __lib_name "${__lib_name}")
+            set(${VARNAME} "${${VARNAME}} -L${__lib_path} -l${__lib_name}")
+        else()
+            set(${VARNAME} "${${VARNAME}} ${__lib}")
+        endif()
+    endforeach()
+endmacro()
+
+# Generate pkgconfig pc file
+if(ORB_SLAM2_BUILD_PKGCONFIG)
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/ORB_SLAM2.pc.in)
+        message("-- Found: ${CMAKE_CURRENT_SOURCE_DIR}/ORB_SLAM2.pc.in")
+
+        # Set the target name
+        set(TARGET_NAME ORB_SLAM2)
+
+        # Dependency for ORB_SLAM2
+        libraries_for_pkgconfig(${TARGET_NAME}_PKGCONFIG_LIBS ${LAPACK_LIBRARIES})
+
+        set(${TARGET_NAME}_PKGCONFIG_CFLAGS "${${TARGET_NAME}_PKGCONFIG_CFLAGS}")
+
+        set(PKGCONFIG_CFLAGS ${${TARGET_NAME}_PKGCONFIG_CFLAGS})
+        set(PKGCONFIG_LIBS ${${TARGET_NAME}_PKGCONFIG_LIBS})
+
+        configure_file(ORB_SLAM2.pc.in ORB_SLAM2.pc @ONLY)
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ORB_SLAM2.pc
+            DESTINATION lib/pkgconfig)
+    else()
+        message("-- pkg-config: ${CMAKE_CURRENT_SOURCE_DIR}/ORB_SLAM2.pc.in is not available for configuration")
+    endif()
+
+endif(ORB_SLAM2_BUILD_PKGCONFIG)
+
