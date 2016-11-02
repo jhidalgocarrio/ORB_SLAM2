@@ -113,6 +113,15 @@ public:
     // True if local mapping is deactivated and we are performing only localization
     bool mbOnlyTracking;
 
+    //Motion Model(public)
+    cv::Mat mVelocity;
+
+    // True if motion model matrix is provided from an external source
+    bool flag_external_motion_model;
+
+    // Counter for teh number of re-localization triggered
+    int number_relocalizations;
+
     void Reset();
 
 protected:
@@ -206,9 +215,6 @@ protected:
     Frame mLastFrame;
     unsigned int mnLastKeyFrameId;
     unsigned int mnLastRelocFrameId;
-
-    //Motion Model
-    cv::Mat mVelocity;
 
     //Color order (true RGB, false BGR, ignored if grayscale)
     bool mbRGB;

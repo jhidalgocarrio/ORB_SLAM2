@@ -146,6 +146,8 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
             mDepthMapFactor = 1.0f/mDepthMapFactor;
     }
 
+    this->number_relocalizations = 0;
+
 }
 
 void Tracking::SetLocalMapper(LocalMapping *pLocalMapper)
@@ -312,7 +314,7 @@ void Tracking::Track()
                 {
                     bOK = TrackWithMotionModel();
                     if(!bOK)
-                        bOK = TrackReferenceKeyFrame();
+                        bOK = TrackReferenceKeyFrame() || this->flag_external_motion_model;
                 }
             }
             else
@@ -398,7 +400,7 @@ void Tracking::Track()
         if(!mbOnlyTracking)
         {
             if(bOK)
-                bOK = TrackLocalMap();
+                bOK = TrackLocalMap() || this->flag_external_motion_model;
         }
         else
         {
@@ -423,13 +425,24 @@ void Tracking::Track()
             // Update motion model
             if(!mLastFrame.mTcw.empty())
             {
-                cv::Mat LastTwc = cv::Mat::eye(4,4,CV_32F);
-                mLastFrame.GetRotationInverse().copyTo(LastTwc.rowRange(0,3).colRange(0,3));
-                mLastFrame.GetCameraCenter().copyTo(LastTwc.rowRange(0,3).col(3));
-                mVelocity = mCurrentFrame.mTcw*LastTwc;
+                if (!this->flag_external_motion_model)
+                {
+                    cv::Mat LastTwc = cv::Mat::eye(4,4,CV_32F);
+                    mLastFrame.GetRotationInverse().copyTo(LastTwc.rowRange(0,3).colRange(0,3));
+                    mLastFrame.GetCameraCenter().copyTo(LastTwc.rowRange(0,3).col(3));
+                    mVelocity = mCurrentFrame.mTcw*LastTwc;
+                    std::cout<<"UPDATE MOTION MODEL[INTERNAL]:\n";
+                }
+                else
+                {
+                    std::cout<<"UPDATE MOTION MODEL[EXTERNAL]:\n";
+                }
             }
             else
+            {
                 mVelocity = cv::Mat();
+                std::cout<<"UPDATE MOTION MODEL[INITIAL]:\n";
+            }
 
             mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.mTcw);
 
@@ -483,6 +496,11 @@ void Tracking::Track()
             mCurrentFrame.mpReferenceKF = mpReferenceKF;
 
         mLastFrame = Frame(mCurrentFrame);
+
+        if (bOK)
+            std::cout<<"EXIT TRACK WITH bOK=TRUE\n";
+        else
+            std::cout<<"EXIT TRACK WITH bOK=FALSE\n";
     }
 
     // Store frame pose information to retrieve the complete camera trajectory afterwards.
@@ -756,6 +774,7 @@ void Tracking::CheckReplacedInLastFrame()
 
 bool Tracking::TrackReferenceKeyFrame()
 {
+    std::cout<<"TRIGGER TRACK_WITH_REFERENCE_KEY_FRAME: ";
     // Compute Bag of Words vector
     mCurrentFrame.ComputeBoW();
 
@@ -795,6 +814,10 @@ bool Tracking::TrackReferenceKeyFrame()
         }
     }
 
+    if (nmatchesMap>=10)
+        std::cout<<"RETURNS TRUE\n";
+    else
+        std::cout<<"RETURNS FALSE\n";
     return nmatchesMap>=10;
 }
 
@@ -866,6 +889,7 @@ void Tracking::UpdateLastFrame()
 
 bool Tracking::TrackWithMotionModel()
 {
+    std::cout<<"TRIGGER TRACK_WITH_MOTION_MODEL: ";
     ORBmatcher matcher(0.9,true);
 
     // Update last frame pose according to its reference keyframe
@@ -924,6 +948,11 @@ bool Tracking::TrackWithMotionModel()
         return nmatches>20;
     }
 
+    if (nmatchesMap>=10)
+        std::cout<<"RETURNS TRUE\n";
+    else
+        std::cout<<"RETURNS FALSE\n";
+
     return nmatchesMap>=10;
 }
 
@@ -931,6 +960,8 @@ bool Tracking::TrackLocalMap()
 {
     // We have an estimation of the camera pose and some map points tracked in the frame.
     // We retrieve the local map and try to find matches to points in the local map.
+
+    std::cout<<"TRIGGER TRACK_LOCAL_MAP ";
 
     UpdateLocalMap();
 
@@ -968,9 +999,15 @@ bool Tracking::TrackLocalMap()
         return false;
 
     if(mnMatchesInliers<30)
+    {
+        std::cout<<"RETURNS FALSE\n";
         return false;
+    }
     else
+    {
+        std::cout<<"RETURNS TRUE\n";
         return true;
+    }
 }
 
 
@@ -1353,6 +1390,10 @@ void Tracking::UpdateLocalKeyFrames()
 
 bool Tracking::Relocalization()
 {
+    std::cout<<"TRIGGER RELOCALIZATION\n";
+
+    this->number_relocalizations++;
+
     // Compute Bag of Words Vector
     mCurrentFrame.ComputeBoW();
 
@@ -1554,6 +1595,8 @@ void Tracking::Reset()
     mlpReferences.clear();
     mlFrameTimes.clear();
     mlbLost.clear();
+
+    this->number_relocalizations = 0;
 
     mpViewer->Release();
 }
