@@ -107,6 +107,25 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 
 cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp, const cv::Mat &tf_motion_model)
 {
+    {
+        // Check whether there is an external source for the motion model
+        if (!tf_motion_model.empty())
+        {
+            mpTracker->flag_external_motion_model = true;
+
+            mpTracker->mVelocity = tf_motion_model;
+        }
+        else
+        {
+            mpTracker->flag_external_motion_model = false;
+        }
+    }
+
+    return this->TrackStereo(imLeft, imRight, timestamp);
+}
+
+cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp)
+{
     if(mSensor!=STEREO)
     {
         cerr << "ERROR: you called TrackStereo but input sensor was not set to STEREO." << endl;
@@ -135,12 +154,6 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const
             mpLocalMapper->Release();
             mbDeactivateLocalizationMode = false;
         }
-
-        // Check whether there is an external source for the motion model
-        if (!tf_motion_model.empty())
-        {
-            mpTracker->flag_external_motion_model = true;
-        }
     }
 
     // Check reset
@@ -151,11 +164,6 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const
         mpTracker->Reset();
         mbReset = false;
     }
-    }
-
-    if (!tf_motion_model.empty())
-    {
-        /** Set the motion model **/
     }
 
     return mpTracker->GrabImageStereo(imLeft,imRight,timestamp);
