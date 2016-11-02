@@ -1,0 +1,13 @@
+<package>
+    <description brief="ORB SLAM2">
+        ORB-SLAM2 is a real-time SLAM library for Monocular, Stereo and
+        RGB-D cameras that computes the camera trajectory and a sparse 3D
+        reconstruction.
+  </description>
+  <author> Raul Mur-Artal/raulmur(at)unizar(dot)es</author>
+  <license>GPLv3</license>
+  <url>https://github.com/raulmur/ORB_SLAM2</url>
+
+  <depend package="base/cmake" />
+  <depend package="gui/pangolin" />
+  </package>
