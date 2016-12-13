@@ -5,3 +5,4 @@ Examples/Monocular/mono_kitti
 Examples/Monocular/mono_tum
 Examples/Stereo/stereo_kitti
 Examples/RGB-D/rgbd_tum
+Thirdparty/g2o/config.h
