@@ -468,7 +468,14 @@ void Tracking::Track()
 
             // Check if we need to insert a new keyframe
             if(NeedNewKeyFrame())
+            {
                 CreateNewKeyFrame();
+                this->new_key_frame_inserted = true;
+            }
+            else
+            {
+                this->new_key_frame_inserted = false;
+            }
 
             // We allow points with high innovation (considererd outliers by the Huber Function)
             // pass to the new keyframe, so that bundle adjustment will finally decide

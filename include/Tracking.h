@@ -74,6 +74,10 @@ public:
     // Use this function if you have deactivated local mapping and you only want to localize the camera.
     void InformOnlyTracking(const bool &flag);
 
+    unsigned int getLastKeyFrameId() const
+    {
+        return mnLastKeyFrameId;
+    }
 
 public:
 
@@ -112,6 +116,8 @@ public:
 
     // True if local mapping is deactivated and we are performing only localization
     bool mbOnlyTracking;
+
+    bool new_key_frame_inserted;
 
     //Motion Model(public)
     cv::Mat mVelocity;
