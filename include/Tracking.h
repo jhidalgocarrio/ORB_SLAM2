@@ -74,6 +74,12 @@ public:
     // Use this function if you have deactivated local mapping and you only want to localize the camera.
     void InformOnlyTracking(const bool &flag);
 
+    /** return Tcw **/
+    cv::Mat getLastKeyFramePose();
+
+    /** return Twc **/
+    cv::Mat getLastKeyFramePoseInverse();
+
     unsigned int getLastKeyFrameId() const
     {
         return mnLastKeyFrameId;

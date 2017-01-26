@@ -275,6 +275,9 @@ void Tracking::Track()
 
     mLastProcessedState=mState;
 
+    /** Default no KF is inserted **/
+    this->new_key_frame_inserted = false;
+
     // Get Map Mutex -> Map cannot be changed
     unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
 
@@ -472,10 +475,6 @@ void Tracking::Track()
                 CreateNewKeyFrame();
                 this->new_key_frame_inserted = true;
             }
-            else
-            {
-                this->new_key_frame_inserted = false;
-            }
 
             // We allow points with high innovation (considererd outliers by the Huber Function)
             // pass to the new keyframe, so that bundle adjustment will finally decide
@@ -543,6 +542,8 @@ void Tracking::StereoInitialization()
 
         // Insert KeyFrame in the map
         mpMap->AddKeyFrame(pKFini);
+
+        /** KF inserted at initialization **/
         this->new_key_frame_inserted = true;
 
         // Create MapPoints and asscoiate to KeyFrame
@@ -1647,6 +1648,15 @@ void Tracking::InformOnlyTracking(const bool &flag)
     mbOnlyTracking = flag;
 }
 
+cv::Mat Tracking::getLastKeyFramePose()
+{
+    return this->mpLastKeyFrame->GetPose();
+}
+
+cv::Mat Tracking::getLastKeyFramePoseInverse()
+{
+    return this->mpLastKeyFrame->GetPoseInverse();
+}
 
 
 } //namespace ORB_SLAM
