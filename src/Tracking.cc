@@ -543,6 +543,7 @@ void Tracking::StereoInitialization()
 
         // Insert KeyFrame in the map
         mpMap->AddKeyFrame(pKFini);
+        this->new_key_frame_inserted = true;
 
         // Create MapPoints and asscoiate to KeyFrame
         for(int i=0; i<mCurrentFrame.N;i++)

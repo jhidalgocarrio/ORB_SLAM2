@@ -9,5 +9,6 @@
   <url>https://github.com/raulmur/ORB_SLAM2</url>
 
   <depend package="gui/pangolin" />
+  <depend package="slam/g2o" />
   <tags>stable</tags>tags>
 </package>
