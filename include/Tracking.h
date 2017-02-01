@@ -82,7 +82,7 @@ public:
 
     unsigned int getLastKeyFrameId() const
     {
-        return mnLastKeyFrameId;
+        return mpLastKeyFrame->mnId;
     }
 
 public:
