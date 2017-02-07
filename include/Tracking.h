@@ -58,7 +58,7 @@ public:
              KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor);
 
     // Preprocess the input and call Track(). Extract features and performs stereo matching.
-    cv::Mat GrabImageStereo(const cv::Mat &imRectLeft,const cv::Mat &imRectRight, const double &timestamp);
+    cv::Mat GrabImageStereo(const cv::Mat &imRectLeft,const cv::Mat &imRectRight, const double &timestamp, const float &inliers_matches_ratio = 0.75f, const float &map_matches_ratio = 0.2f);
     cv::Mat GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp);
     cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp);
 
@@ -83,6 +83,11 @@ public:
     unsigned int getLastKeyFrameId() const
     {
         return mpLastKeyFrame->mnId;
+    }
+
+    void setNewFPS (float fps)
+    {
+        this->mMaxFrames = fps;
     }
 
 public:
@@ -139,7 +144,7 @@ public:
 protected:
 
     // Main tracking function. It is independent of the input sensor.
-    void Track();
+    void Track(const float &inliers_matches_ratio = 0.75f, const float &map_matches_ratio = 0.2f);
 
     // Map initialization for stereo and RGB-D
     void StereoInitialization();
@@ -163,6 +168,7 @@ protected:
     void SearchLocalPoints();
 
     bool NeedNewKeyFrame();
+    bool adaptiveNeedNewKeyFrame(const float &thRefRatio = 0.75f, const float &thMapRatio = 0.2f);
     void CreateNewKeyFrame();
 
     // In case of performing only localization, this flag is true when there are no matches to

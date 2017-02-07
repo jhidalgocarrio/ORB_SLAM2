@@ -166,7 +166,7 @@ void Tracking::SetViewer(Viewer *pViewer)
 }
 
 
-cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRectRight, const double &timestamp)
+cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRectRight, const double &timestamp, const float &inliers_matches_ratio, const float &map_matches_ratio)
 {
     mImGray = imRectLeft;
     cv::Mat imGrayRight = imRectRight;
@@ -200,7 +200,7 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
 
     mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
-    Track();
+    Track(inliers_matches_ratio, map_matches_ratio);
 
     return mCurrentFrame.mTcw.clone();
 }
@@ -266,7 +266,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
     return mCurrentFrame.mTcw.clone();
 }
 
-void Tracking::Track()
+void Tracking::Track(const float &inliers_matches_ratio, const float &map_matches_ratio)
 {
     if(mState==NO_IMAGES_YET)
     {
@@ -470,10 +470,11 @@ void Tracking::Track()
             mlpTemporalPoints.clear();
 
             // Check if we need to insert a new keyframe
-            if(NeedNewKeyFrame())
+            if(adaptiveNeedNewKeyFrame(inliers_matches_ratio, map_matches_ratio))
             {
                 CreateNewKeyFrame();
                 this->new_key_frame_inserted = true;
+                std::cout<<"NEW KEY FRAME INSERTED\n";
             }
 
             // We allow points with high innovation (considererd outliers by the Huber Function)
@@ -1019,6 +1020,99 @@ bool Tracking::TrackLocalMap()
     }
 }
 
+bool Tracking::adaptiveNeedNewKeyFrame(const float &thRefRatio, const float &thMapRatio)
+{
+    if(mbOnlyTracking)
+        return false;
+
+    // If Local Mapping is freezed by a Loop Closure do not insert keyframes
+    if(mpLocalMapper->isStopped() || mpLocalMapper->stopRequested())
+        return false;
+
+    const int nKFs = mpMap->KeyFramesInMap();
+
+    // Do not insert keyframes if not enough frames have passed from last relocalisation
+    if(mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && nKFs>mMaxFrames)
+        return false;
+
+    // Tracked MapPoints in the reference keyframe
+    int nMinObs = 3;
+    if(nKFs<=2)
+        nMinObs=2;
+    int nRefMatches = mpReferenceKF->TrackedMapPoints(nMinObs);
+
+    // Local Mapping accept keyframes?
+    bool bLocalMappingIdle = mpLocalMapper->AcceptKeyFrames();
+
+    // Stereo & RGB-D: Ratio of close "matches to map"/"total matches"
+    // "total matches = matches to map + visual odometry matches"
+    // Visual odometry matches will become MapPoints if we insert a keyframe.
+    // This ratio measures how many MapPoints we could create if we insert a keyframe.
+    int nMap = 0;
+    int nTotal= 0;
+    if(mSensor!=System::MONOCULAR)
+    {
+        for(int i =0; i<mCurrentFrame.N; i++)
+        {
+            if(mCurrentFrame.mvDepth[i]>0 && mCurrentFrame.mvDepth[i]<mThDepth)
+            {
+                nTotal++;
+                if(mCurrentFrame.mvpMapPoints[i])
+                    if(mCurrentFrame.mvpMapPoints[i]->Observations()>0)
+                        nMap++;
+            }
+        }
+    }
+    else
+    {
+        // There are no visual odometry matches in the monocular case
+        nMap=1;
+        nTotal=1;
+    }
+
+    const float ratioMap = (float)nMap/fmax(1.0f,nTotal);
+
+    // Adaptive Condition: Current matches smaller than ratio of local map
+    // matches or VO/total ratio matches bigger than thMapRatio and the current frame at least track more than 15 points.
+    const bool ac = ((mnMatchesInliers<nRefMatches*thRefRatio || ratioMap<thMapRatio) && mnMatchesInliers>15);
+
+    std::cout<<"nMap ["<<nMap<<"]/nTotal["<< nTotal<<"] = ratioMap: "<<ratioMap<<"\n";
+    std::cout<<"mnMatchesInliers ["<< mnMatchesInliers <<"] < nRefMatches ["<<nRefMatches<<"] * thRefRatio ["<< thRefRatio <<"]("<< nRefMatches * thRefRatio <<") || ratioMap ["<< ratioMap <<"] < " <<"thMapRatio ["<< thMapRatio<<"]";
+    if (ac)
+    {
+        std::cout<<" TRUE\n";
+    }
+    else
+    {
+        std::cout<<" FALSE\n";
+    }
+
+    if(ac)
+    {
+        // If the mapping accepts keyframes, insert keyframe.
+        // Otherwise send a signal to interrupt BA
+        if(bLocalMappingIdle)
+        {
+            return true;
+        }
+        else
+        {
+            mpLocalMapper->InterruptBA();
+            if(mSensor!=System::MONOCULAR)
+            {
+                if(mpLocalMapper->KeyframesInQueue()<3)
+                    return true;
+                else
+                    return false;
+            }
+            else
+                return false;
+        }
+    }
+    else
+        return false;
+}
+
 
 bool Tracking::NeedNewKeyFrame()
 {
@@ -1092,6 +1186,27 @@ bool Tracking::NeedNewKeyFrame()
     const bool c1c =  mSensor!=System::MONOCULAR && (mnMatchesInliers<nRefMatches*0.25 || ratioMap<0.3f) ;
     // Condition 2: Few tracked points compared to reference keyframe. Lots of visual odometry compared to map matches.
     const bool c2 = ((mnMatchesInliers<nRefMatches*thRefRatio|| ratioMap<thMapRatio) && mnMatchesInliers>15);
+
+    std::cout<<"mnMatchesInliers ["<< mnMatchesInliers <<"] < nRefMatches ["<<nRefMatches<<"] * 0.25 ("<< nRefMatches * 0.25 <<") || ratioMap ["<< ratioMap <<"] < 0.3";
+    if (c1c)
+    {
+        std::cout<<" TRUE\n";
+    }
+    else
+    {
+        std::cout<<" FALSE\n";
+    }
+
+    std::cout<<"nMap:"<<nMap<<" nTotal:"<< nTotal<<" -> ratioMap: "<<ratioMap<<"\n";
+    std::cout<<"mnMatchesInliers ["<< mnMatchesInliers <<"] < nRefMatches ["<< nRefMatches<< "] * thRefRatio ["<< thRefRatio <<"] ("<< nRefMatches * thRefRatio <<") || ratioMap ["<< ratioMap <<"] < thMapRatio ["<< thMapRatio <<"]";
+    if (c2)
+    {
+        std::cout<<" TRUE\n";
+    }
+    else
+    {
+        std::cout<<" FALSE\n";
+    }
 
     if((c1a||c1b||c1c)&&c2)
     {

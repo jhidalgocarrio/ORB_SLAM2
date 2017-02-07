@@ -105,7 +105,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mpLoopCloser->SetLocalMapper(mpLocalMapper);
 }
 
-cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp, const cv::Mat &tf_motion_model)
+cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp, const cv::Mat &tf_motion_model, const float &inliers_matches_ratio, const float &map_matches_ratio)
 {
     {
         // Check whether there is an external source for the motion model
@@ -121,10 +121,10 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const
         }
     }
 
-    return this->TrackStereo(imLeft, imRight, timestamp);
+    return this->TrackStereo(imLeft, imRight, timestamp, inliers_matches_ratio, map_matches_ratio);
 }
 
-cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp)
+cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp, const float &inliers_matches_ratio, const float &map_matches_ratio)
 {
     if(mSensor!=STEREO)
     {
@@ -166,7 +166,7 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const
     }
     }
 
-    return mpTracker->GrabImageStereo(imLeft,imRight,timestamp);
+    return mpTracker->GrabImageStereo(imLeft, imRight, timestamp, inliers_matches_ratio, map_matches_ratio);
 }
 
 cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
