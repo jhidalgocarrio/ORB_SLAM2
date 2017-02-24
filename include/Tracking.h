@@ -90,6 +90,11 @@ public:
         this->mMaxFrames = fps;
     }
 
+    int getMatchesInliers()
+    {
+        return this->mnMatchesInliers;
+    }
+
 public:
 
     // Tracking states
@@ -138,6 +143,9 @@ public:
 
     // Counter for teh number of re-localization triggered
     int number_relocalizations;
+
+    int inliers_matches_th;
+    float map_matches_ratio;
 
     void Reset();
 

@@ -147,6 +147,8 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     }
 
     this->number_relocalizations = 0;
+    this->inliers_matches_th = 0;
+    this->map_matches_ratio = 0.00;
 
 }
 
@@ -1075,9 +1077,11 @@ bool Tracking::adaptiveNeedNewKeyFrame(const float &thRefRatio, const float &thM
     // Adaptive Condition: Current matches smaller than ratio of local map
     // matches or VO/total ratio matches bigger than thMapRatio and the current frame at least track more than 15 points.
     const bool ac = ((mnMatchesInliers<nRefMatches*thRefRatio || ratioMap<thMapRatio) && mnMatchesInliers>15);
+    this->inliers_matches_th = static_cast<int>(nRefMatches * thRefRatio);
+    this->map_matches_ratio = ratioMap;
 
     std::cout<<"nMap ["<<nMap<<"]/nTotal["<< nTotal<<"] = ratioMap: "<<ratioMap<<"\n";
-    std::cout<<"mnMatchesInliers ["<< mnMatchesInliers <<"] < nRefMatches ["<<nRefMatches<<"] * thRefRatio ["<< thRefRatio <<"]("<< nRefMatches * thRefRatio <<") || ratioMap ["<< ratioMap <<"] < " <<"thMapRatio ["<< thMapRatio<<"]";
+    std::cout<<"mnMatchesInliers ["<< mnMatchesInliers <<"] < nRefMatches ["<<nRefMatches<<"] * thRefRatio ["<< thRefRatio <<"]("<< this->inliers_matches_th <<") || ratioMap ["<< ratioMap <<"] < " <<"thMapRatio ["<< thMapRatio<<"]";
     if (ac)
     {
         std::cout<<" TRUE\n";
