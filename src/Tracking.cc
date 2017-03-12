@@ -317,9 +317,9 @@ void Tracking::Track(const float &inliers_matches_ratio, const float &map_matche
                 }
                 else
                 {
-                    bOK = TrackWithMotionModel();
+                    bOK = TrackWithMotionModel(inliers_matches_ratio);
                     if(!bOK)
-                        bOK = TrackReferenceKeyFrame() || this->flag_external_motion_model;
+                        bOK = TrackReferenceKeyFrame();
                 }
             }
             else
@@ -343,7 +343,7 @@ void Tracking::Track(const float &inliers_matches_ratio, const float &map_matche
 
                     if(!mVelocity.empty())
                     {
-                        bOK = TrackWithMotionModel();
+                        bOK = TrackWithMotionModel(inliers_matches_ratio);
                     }
                     else
                     {
@@ -365,7 +365,7 @@ void Tracking::Track(const float &inliers_matches_ratio, const float &map_matche
                     cv::Mat TcwMM;
                     if(!mVelocity.empty())
                     {
-                        bOKMM = TrackWithMotionModel();
+                        bOKMM = TrackWithMotionModel(inliers_matches_ratio);
                         vpMPsMM = mCurrentFrame.mvpMapPoints;
                         vbOutMM = mCurrentFrame.mvbOutlier;
                         TcwMM = mCurrentFrame.mTcw.clone();
@@ -405,7 +405,7 @@ void Tracking::Track(const float &inliers_matches_ratio, const float &map_matche
         if(!mbOnlyTracking)
         {
             if(bOK)
-                bOK = TrackLocalMap() || this->flag_external_motion_model;
+                bOK = TrackLocalMap(map_matches_ratio);
         }
         else
         {
@@ -413,7 +413,7 @@ void Tracking::Track(const float &inliers_matches_ratio, const float &map_matche
             // a local map and therefore we do not perform TrackLocalMap(). Once the system relocalizes
             // the camera we will use the local map again.
             if(bOK && !mbVO)
-                bOK = TrackLocalMap();
+                bOK = TrackLocalMap(map_matches_ratio);
         }
 
         if(bOK)
@@ -899,7 +899,7 @@ void Tracking::UpdateLastFrame()
     }
 }
 
-bool Tracking::TrackWithMotionModel()
+bool Tracking::TrackWithMotionModel(const float &inliers_matches_ratio)
 {
     std::cout<<"TRIGGER TRACK_WITH_MOTION_MODEL: ";
     ORBmatcher matcher(0.9,true);
@@ -921,13 +921,13 @@ bool Tracking::TrackWithMotionModel()
     int nmatches = matcher.SearchByProjection(mCurrentFrame,mLastFrame,th,mSensor==System::MONOCULAR);
 
     // If few matches, uses a wider window search
-    if(nmatches<20)
+    if(nmatches<(inliers_matches_ratio * 25.0))
     {
         fill(mCurrentFrame.mvpMapPoints.begin(),mCurrentFrame.mvpMapPoints.end(),static_cast<MapPoint*>(NULL));
         nmatches = matcher.SearchByProjection(mCurrentFrame,mLastFrame,2*th,mSensor==System::MONOCULAR);
     }
 
-    if(nmatches<20)
+    if(nmatches<(inliers_matches_ratio * 25.0))
         return false;
 
     // Optimize frame pose with all matches
@@ -952,28 +952,29 @@ bool Tracking::TrackWithMotionModel()
             else if(mCurrentFrame.mvpMapPoints[i]->Observations()>0)
                 nmatchesMap++;
         }
-    }    
+    }
 
     if(mbOnlyTracking)
     {
-        mbVO = nmatchesMap<10;
-        return nmatches>20;
+        mbVO = nmatchesMap<(inliers_matches_ratio * 12.0);
+        return nmatches>(inliers_matches_ratio * 25.0);
     }
 
-    if (nmatchesMap>=10)
-        std::cout<<"RETURNS TRUE\n";
+    bool return_value = (nmatchesMap>=(inliers_matches_ratio * 12.0));
+    if (return_value)
+        std::cout<<"RETURNS nmatchesMap["<<nmatchesMap<<"] >= "<<(inliers_matches_ratio * 12.0) <<": TRUE\n";
     else
-        std::cout<<"RETURNS FALSE\n";
+        std::cout<<"RETURNS nmatchesMap["<<nmatchesMap<<"] >= "<<(inliers_matches_ratio * 12.0) <<": FALSE\n";
 
-    return nmatchesMap>=10;
+    return return_value;
 }
 
-bool Tracking::TrackLocalMap()
+bool Tracking::TrackLocalMap(const float &map_matches_ratio)
 {
     // We have an estimation of the camera pose and some map points tracked in the frame.
     // We retrieve the local map and try to find matches to points in the local map.
 
-    std::cout<<"TRIGGER TRACK_LOCAL_MAP ";
+    std::cout<<"TRIGGER TRACK_LOCAL_MAP: ";
 
     UpdateLocalMap();
 
@@ -1010,14 +1011,14 @@ bool Tracking::TrackLocalMap()
     if(mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && mnMatchesInliers<50)
         return false;
 
-    if(mnMatchesInliers<30)
+    if(mnMatchesInliers<(map_matches_ratio * 60))
     {
-        std::cout<<"RETURNS FALSE\n";
+        std::cout<<"RETURNS mnMatchesInliers["<<mnMatchesInliers<<"] < "<<(map_matches_ratio * 60.0) <<": FALSE\n";
         return false;
     }
     else
     {
-        std::cout<<"RETURNS TRUE\n";
+        std::cout<<"RETURNS mnMatchesInliers["<<mnMatchesInliers<<"] < "<<(map_matches_ratio * 60.0) <<": TRUE\n";
         return true;
     }
 }

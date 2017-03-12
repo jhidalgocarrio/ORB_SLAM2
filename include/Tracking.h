@@ -164,7 +164,7 @@ protected:
     void CheckReplacedInLastFrame();
     bool TrackReferenceKeyFrame();
     void UpdateLastFrame();
-    bool TrackWithMotionModel();
+    bool TrackWithMotionModel(const float &inliers_matches_ratio = 0.75f);
 
     bool Relocalization();
 
@@ -172,7 +172,7 @@ protected:
     void UpdateLocalPoints();
     void UpdateLocalKeyFrames();
 
-    bool TrackLocalMap();
+    bool TrackLocalMap(const float &map_matches_ratio = 0.2f);
     void SearchLocalPoints();
 
     bool NeedNewKeyFrame();
