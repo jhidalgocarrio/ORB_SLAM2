@@ -104,14 +104,14 @@ cv::Mat FrameDrawer::DrawFrame()
                 // This is a match to a MapPoint in the map
                 if(vbMap[i])
                 {
-                    cv::rectangle(im,pt1,pt2,cv::Scalar(0,255,0));
-                    cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(0,255,0),-1);
+                    cv::rectangle(im,pt1,pt2,cv::Scalar(0,0,255));
+                    cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(0,0,255),-1);
                     mnTracked++;
                 }
                 else // This is match to a "visual odometry" MapPoint created in the last frame
                 {
-                    cv::rectangle(im,pt1,pt2,cv::Scalar(255,0,0));
-                    cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(255,0,0),-1);
+                    cv::rectangle(im,pt1,pt2,cv::Scalar(0,255,0));
+                    cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(0,255,0),-1);
                     mnTrackedVO++;
                 }
             }
@@ -135,12 +135,12 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
     else if(nState==Tracking::OK)
     {
         if(!mbOnlyTracking)
-            s << "SLAM MODE |  ";
+            s << "ADAPTIVE SLAM ->  ";
         else
-            s << "LOCALIZATION | ";
+            s << "LOCALIZATION -> ";
         int nKFs = mpMap->KeyFramesInMap();
         int nMPs = mpMap->MapPointsInMap();
-        s << "KFs: " << nKFs << ", MPs: " << nMPs << ", Matches: " << mnTracked;
+        s << "#KF: " << nKFs << ", #MP: " << nMPs << ", #Matches: " << mnTracked;
         if(mnTrackedVO>0)
             s << ", + VO matches: " << mnTrackedVO;
     }
